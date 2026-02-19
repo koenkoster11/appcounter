@@ -9,38 +9,210 @@
     <!-- PWA & Mobile Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="theme-color" content="#f8fafc">
-    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3567/3567015.png">
 
+    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
     <style>
         body {
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            /* Prevent pull-to-refresh on some mobile browsers for a more app-like feel */
             overscroll-behavior-y: contain;
         }
-        /* Prevent text selection while tapping buttons rapidly */
         button {
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
         }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out; }
+        .animate-zoom-in { animation: zoomIn 0.2s ease-out; }
+        .animate-slide-up { animation: slideUp 0.3s ease-out; }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
     </style>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.4/",
     "react": "https://esm.sh/react@^19.2.4",
-    "lucide-react": "https://esm.sh/lucide-react@^0.575.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.575.0"
   }
 }
 </script>
 </head>
 <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Custom Icon Component to avoid library loading issues
+        const Icon = ({ name, size = 24, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
+        };
+
+        const App = () => {
+            const [count, setCount] = useState(0);
+            const [showConfirm, setShowConfirm] = useState(false);
+            const [showHelp, setShowHelp] = useState(false);
+            const [isInitialized, setIsInitialized] = useState(false);
+
+            // Load saved count
+            useEffect(() => {
+                const savedCount = localStorage.getItem('zen_counter_val');
+                if (savedCount !== null) {
+                    setCount(parseInt(savedCount, 10));
+                }
+                setIsInitialized(true);
+            }, []);
+
+            // Save count whenever it changes
+            useEffect(() => {
+                if (isInitialized) {
+                    localStorage.setItem('zen_counter_val', count.toString());
+                }
+            }, [count, isInitialized]);
+
+            const triggerHaptic = (intensity = 10) => {
+                if ('vibrate' in navigator) navigator.vibrate(intensity);
+            };
+
+            const increment = () => {
+                setCount(prev => prev + 1);
+                triggerHaptic(15);
+            };
+
+            const decrement = () => {
+                setCount(prev => prev - 1);
+                triggerHaptic(10);
+            };
+
+            const confirmReset = () => {
+                setCount(0);
+                setShowConfirm(false);
+                triggerHaptic([30, 50, 30]);
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50">
+                    <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-8 flex flex-col items-center border border-slate-100 relative">
+                        
+                        <button 
+                            onClick={() => setShowHelp(true)}
+                            className="absolute top-6 right-6 p-2 text-slate-300 hover:text-indigo-500 transition-colors"
+                        >
+                            <Icon name="info" />
+                        </button>
+
+                        <div className="mb-8 text-center">
+                            <h1 className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">Tally Counter</h1>
+                            <div className="h-1 w-8 bg-indigo-500 mx-auto rounded-full"></div>
+                        </div>
+
+                        <div className="relative mb-10 select-none">
+                            <span className="text-[120px] font-black tabular-nums leading-none text-slate-800 tracking-tighter">
+                                {count}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 w-full mb-8">
+                            <button 
+                                onClick={decrement}
+                                className="flex items-center justify-center py-10 rounded-3xl bg-slate-50 hover:bg-slate-100 text-slate-400 transition-all active:scale-90"
+                            >
+                                <Icon name="minus" size={32} />
+                            </button>
+                            <button 
+                                onClick={increment}
+                                className="flex items-center justify-center py-10 rounded-3xl bg-indigo-600 text-white shadow-xl shadow-indigo-200 transition-all active:scale-90"
+                            >
+                                <Icon name="plus" size={32} />
+                            </button>
+                        </div>
+
+                        <button 
+                            onClick={() => setShowConfirm(true)}
+                            className="flex items-center gap-2 px-6 py-3 text-slate-300 hover:text-red-400 transition-all active:scale-95"
+                        >
+                            <Icon name="rotate-ccw" size={16} />
+                            <span className="text-xs font-bold uppercase tracking-widest">Reset</span>
+                        </button>
+                    </div>
+
+                    {/* Reset Confirmation */}
+                    {showConfirm && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4 animate-fade-in">
+                            <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl animate-zoom-in">
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-4">
+                                        <Icon name="alert-circle" size={32} />
+                                    </div>
+                                    <h2 className="text-xl font-extrabold text-slate-800 mb-2">Are you sure?</h2>
+                                    <p className="text-slate-500 mb-8 text-sm">This will reset the count to zero.</p>
+                                    <div className="flex flex-col gap-3 w-full">
+                                        <button onClick={confirmReset} className="w-full py-4 bg-red-500 text-white font-bold rounded-2xl active:scale-95">Yes, Reset</button>
+                                        <button onClick={() => setShowConfirm(false)} className="w-full py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl active:scale-95">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Installation Help */}
+                    {showHelp && (
+                        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 animate-fade-in">
+                            <div className="bg-white rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl animate-slide-up sm:animate-zoom-in">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-black text-slate-800">Phone Setup</h2>
+                                    <button onClick={() => setShowHelp(false)} className="p-2 bg-slate-100 rounded-full text-slate-400">
+                                        <Icon name="x" size={20} />
+                                    </button>
+                                </div>
+                                <div className="space-y-4 text-sm text-slate-600">
+                                    <p>To use this like a real app on your phone:</p>
+                                    <div className="bg-slate-50 p-4 rounded-2xl">
+                                        <p className="font-bold text-slate-800 mb-1">iPhone (Safari)</p>
+                                        <p>Tap <Icon name="share" size={14} className="inline mx-1"/> then <strong>"Add to Home Screen"</strong>.</p>
+                                    </div>
+                                    <div className="bg-slate-50 p-4 rounded-2xl">
+                                        <p className="font-bold text-slate-800 mb-1">Android (Chrome)</p>
+                                        <p>Tap the 3 dots (⋮) then <strong>"Install App"</strong>.</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowHelp(false)} className="w-full mt-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl">Got it</button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-8 flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                        <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                        Active & Saving
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
 </body>
 </html>
